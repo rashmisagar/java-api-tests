@@ -1,0 +1,8 @@
+pojo/SavedProduct.class
+pojo/UpdatedProduct.class
+demo/ProductAPITests.class
+pojo/Variant.class
+pojo/BeforeUpdatedProduct.class
+pojo/ProductResponse.class
+pojo/Product.class
+pojo/UpdateProductResponse.class
