@@ -19,7 +19,7 @@ The `cleanup()` method is intended to delete all test data and close the MongoDB
 
 ## Running the Tests
 
-The tests can be run individually from the test file or through the `testng.xml` file. This file is a TestNG configuration file that specifies which test methods to run.
+The tests can be run through the `testng.xml` file. This file is a TestNG configuration file that specifies which test methods to run.
 
 Here are the steps to run the tests:
 

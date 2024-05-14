@@ -1,8 +1,22 @@
 <!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd" >
-<suite name="Suite1">
-    <test name="Test1">
+<suite name="ProductAPITestsSuite">
+    <test name="ProductAPITests">
         <classes>
-            <class name="demo.ProductAPITests" />
+            <class name="demo.ProductAPITests">
+                <methods>
+                    <include name="testGetAllProducts"/>
+                    <include name="testCreateProduct"/>
+                    <include name="testCreateProductWithSameName"/>
+                    <include name="testCreateProductWithMissingVariant"/>
+                    <include name="testUpdateProductById"/>
+                    <include name="testUpdateNonExistentProduct"/>
+                    <include name="testSearchItems"/>
+                    <include name="testSearchItemsWithNoResults"/>
+                    <include name="testDeleteProductById"/>
+                    <include name="testDeleteNonExistentProductById"/>
+                    <include name="testDeleteInvalidProduct"/>
+                </methods>
+            </class>
         </classes>
     </test>
 </suite>

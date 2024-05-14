@@ -23,7 +23,7 @@ import static org.testng.Assert.assertFalse;
 public class ProductAPITests {
 
     private static final String BASE_URI = "http://localhost:3000";
-    private static final String PRODUCT_NAME = "Test Product1";
+    private static final String PRODUCT_NAME = "Laptop11";
     private static final String PRODUCT_DESCRIPTION = "This is a test product";
     private static final String VARIANT_NAME = "Variant1";
     private static final String VARIANT_SKU = "V1";
