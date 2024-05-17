@@ -12,9 +12,9 @@ import pojo.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import static io.restassured.RestAssured.given;
-import static io.restassured.RestAssured.when;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.testng.Assert.assertEquals;
@@ -23,14 +23,20 @@ import static org.testng.Assert.assertFalse;
 public class ProductAPITests {
 
     private static final String BASE_URI = "http://localhost:3000";
-    private static final String PRODUCT_NAME = "Laptop11";
     private static final String PRODUCT_DESCRIPTION = "This is a test product";
     private static final String VARIANT_NAME = "Variant1";
     private static final String VARIANT_SKU = "V1";
     private String productId;
+    private String productName;
     private String invalidProductId;
     Product product = new Product();
     Variant variant = new Variant();
+
+    private String generateRandomProductName() {
+        Random random = new Random();
+        int randomNum = random.nextInt(1000);  // Generate a random number between 0 and 999
+        return "Laptop-" + randomNum;
+    }
 
     @BeforeClass
     public void setup() {
@@ -53,7 +59,8 @@ public class ProductAPITests {
 
     @Test
     public void testCreateProduct() {
-        createProduct(PRODUCT_NAME, PRODUCT_DESCRIPTION, VARIANT_NAME, VARIANT_SKU);
+        this.productName = generateRandomProductName();
+        createProduct(this.productName, PRODUCT_DESCRIPTION, VARIANT_NAME, VARIANT_SKU);
 
         RequestSpecification request = given()
                 .contentType(ContentType.JSON)
@@ -75,7 +82,7 @@ public class ProductAPITests {
 
     @Test
     public void testCreateProductWithSameName() {
-        createProduct(PRODUCT_NAME, PRODUCT_DESCRIPTION, VARIANT_NAME, VARIANT_SKU);
+        createProduct(this.productName, PRODUCT_DESCRIPTION, VARIANT_NAME, VARIANT_SKU);
 
         RequestSpecification request = given()
                 .contentType(ContentType.JSON)
