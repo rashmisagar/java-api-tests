@@ -1,18 +1,15 @@
-package demo;
+package apiTests;
 
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
-import io.restassured.specification.RequestSpecification;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 import pojo.*;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
+import utils.*;
+import pageObjects.*;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
@@ -20,27 +17,28 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 
-public class ProductAPITests {
-
+public class RefactoredAPITests {
     private static final String BASE_URI = "http://localhost:3000";
     private static final String PRODUCT_DESCRIPTION = "This is a test product";
     private static final String VARIANT_NAME = "Variant1";
     private static final String VARIANT_SKU = "V1";
+    private static final double PRICE = 2199.99;
+    private static final double ADDITIONAL_COST = 20;
+    private static final int STOCK_COUNT = 200;
+    
     private String productId;
     private String productName;
     private String invalidProductId;
-    Product product = new Product();
-    Variant variant = new Variant();
-
-    private String generateRandomProductName() {
-        Random random = new Random();
-        int randomNum = random.nextInt(1000);  // Generate a random number between 0 and 999
-        return "Laptop-" + randomNum;
-    }
+    private ProductAPI productAPI;
+    Utilities utils = new Utilities();
+    MongoDBManager mongoDBManager;
 
     @BeforeClass
     public void setup() {
         RestAssured.baseURI = BASE_URI;
+        String connectionString = System.getenv("MONGO_URI");
+        mongoDBManager = new MongoDBManager(connectionString, "test");
+        productAPI = new ProductAPI();
     }
 
     @Test
@@ -59,19 +57,11 @@ public class ProductAPITests {
 
     @Test
     public void testCreateProduct() {
-        this.productName = generateRandomProductName();
-        createProduct(this.productName, PRODUCT_DESCRIPTION, VARIANT_NAME, VARIANT_SKU);
+        this.productName = utils.generateRandomProductName();
+        Product product = productAPI.createProduct(productName, PRODUCT_DESCRIPTION, PRICE, VARIANT_NAME, VARIANT_SKU, ADDITIONAL_COST, STOCK_COUNT);
 
-        RequestSpecification request = given()
-                .contentType(ContentType.JSON)
-                .body(product);
-
-        // Deserialize the response into a ProductResponse object
-        ProductResponse productResponse = request.when().post("/api/createProduct")
-                .then().log().all().extract().response().as(ProductResponse.class);
-
-        System.out.println("Response: " + productResponse);
-
+        ProductResponse productResponse = productAPI.createProductResponse(product);
+        
         // Assertions
         Assert.assertTrue(productResponse.isSuccess());
         assertEquals("New Product saved successfully!!", productResponse.getMessage());
@@ -82,38 +72,21 @@ public class ProductAPITests {
 
     @Test
     public void testCreateProductWithSameName() {
-        createProduct(this.productName, PRODUCT_DESCRIPTION, VARIANT_NAME, VARIANT_SKU);
+        Product product = productAPI.createProduct(this.productName, PRODUCT_DESCRIPTION, PRICE, VARIANT_NAME, VARIANT_SKU, ADDITIONAL_COST, STOCK_COUNT);
 
-        RequestSpecification request = given()
-                .contentType(ContentType.JSON)
-                .body(product);
-
-        // Deserialize the response into a ProductResponse object
-        UpdateProductResponse updatedProductResponse = request.when().post("/api/createProduct")
-                .then().log().all().extract().response().as(UpdateProductResponse.class);
-
+        UpdateProductResponse updateProductResponse = productAPI.updateProductResponse(product);
+        
         // Assertions
-        Assert.assertTrue(updatedProductResponse.isSuccess());
-        assertEquals("Product's variant updated and saved successfully", updatedProductResponse.getMessage());
+        Assert.assertTrue(updateProductResponse.isSuccess());
+        assertEquals("Product's variant updated and saved successfully", updateProductResponse.getMessage());
 
     }
 
     @Test
     public void testCreateProductWithMissingVariant() {
-        product.setName("Test Product15");
-        product.setDescription("This is a test product");
-        product.setPrice(2199.99);
+        Product product = productAPI.createProduct(productName, PRODUCT_DESCRIPTION, PRICE);
 
-        List<Variant> variants = new ArrayList<>();
-        product.setVariants(variants);
-
-        RequestSpecification request = given()
-                .contentType(ContentType.JSON)
-                .body(product);
-
-        // Deserialize the response into a ProductResponse object
-        ProductResponse productResponse = request.when().post("/api/createProduct")
-                .then().log().all().extract().response().as(ProductResponse.class);
+        ProductResponse productResponse = productAPI.createProductResponse(product);
 
         // Assertions
         assertFalse(productResponse.isSuccess());
@@ -122,17 +95,9 @@ public class ProductAPITests {
 
     @Test
     public void testUpdateProductById() {
-        //this.productId = "664381368ef21384a2badb17";
-        product.setName("MacBook Pro");
-
-        RequestSpecification request = given()
-                .contentType(ContentType.JSON)
-                .body(product)
-                .pathParam("productId", this.productId);
-
-        // Deserialize the response into a ProductResponse object
-        BeforeUpdateProductResponse beforeUpdateProductResponse = request.when().patch("/api/updateProduct/{productId}")
-                .then().log().all().extract().as(BeforeUpdateProductResponse.class);
+        Product product = productAPI.createProduct(productName);
+        String endpoint = "/api/updateProduct/{productId}";
+        BeforeUpdateProductResponse beforeUpdateProductResponse = productAPI.getProductBeforeUpdate(product, this.productId);
 
         // Assertions
         Assert.assertTrue(beforeUpdateProductResponse.isSuccess());
@@ -142,7 +107,7 @@ public class ProductAPITests {
     @Test
     public void testUpdateNonExistentProduct() {
         this.invalidProductId = "664287dae2fdcdac02214ca1";
-        product.setName("MacBook Pro");
+        Product product = productAPI.createProduct(productName);
         Response response = given()
                 .contentType(ContentType.JSON)
                 .body(product)
@@ -233,25 +198,10 @@ public class ProductAPITests {
 
     @AfterClass
     public void cleanup() {
-        // Delete all test data
-        //collection.deleteMany(new Document());
-
-        // Close the MongoDB connection
-        //mongoClient.close();
+        mongoDBManager.cleanupCollections("products");
+        mongoDBManager.cleanupCollections("variants");
+        mongoDBManager.cleanupCollections("test");
+        mongoDBManager.close();
     }
 
-    private void createProduct(String productName, String productDescription, String variantName, String variantSku) {
-        product.setName(productName);
-        product.setDescription(productDescription);
-        product.setPrice(2199.99);
-
-        variant.setName(variantName);
-        variant.setSku(variantSku);
-        variant.setAdditionalCost(20);
-        variant.setStockCount(200);
-
-        List<Variant> variants = new ArrayList<>();
-        variants.add(variant);
-        product.setVariants(variants);
-    }
 }

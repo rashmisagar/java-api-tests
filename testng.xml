@@ -2,7 +2,7 @@
 <suite name="ProductAPITestsSuite">
     <test name="ProductAPITests">
         <classes>
-            <class name="demo.ProductAPITests">
+            <class name="apiTests.ProductAPITests">
                 <methods>
                     <include name="testGetAllProducts"/>
                     <include name="testCreateProduct"/>
