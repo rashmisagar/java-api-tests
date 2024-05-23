@@ -48,25 +48,16 @@ public class ProductAPI {
 
     public Product createProduct(String productName, String productDescription, double price) {
         product = new Product();
-        variant = new Variant();
-
         product.setName(productName);
         product.setDescription(productDescription);
         product.setPrice(price);
 
         List<Variant> variants = new ArrayList<>();
-        variants.add(variant);
         product.setVariants(variants);
         return product;
     }
 
     public Product createProduct(String productName) {
-        product = new Product();
-        product.setName(productName);
-        return product;
-    }
-
-    public Product updateProduct(String productName) {
         product = new Product();
         product.setName(productName);
         return product;

@@ -40,7 +40,6 @@ public class RefactoredAPITests {
     private String productName;
     private String invalidProductId;
     Product product = new Product();
-    Variant variant = new Variant();
     private ProductAPI productAPI;
     Utilities utils = new Utilities();
     MongoDBManager mongoDBManager;
@@ -87,21 +86,9 @@ public class RefactoredAPITests {
 
     @Test
     public void testCreateProductWithMissingVariant() {
-        product.setName("Test Product15");
-        product.setDescription("This is a test product");
-        product.setPrice(2199.99);
-
-        List<Variant> variants = new ArrayList<>();
-        product.setVariants(variants);
-
-        RequestSpecification request = given()
-                .contentType(ContentType.JSON)
-                .body(product);
-
-        // Deserialize the response into a ProductResponse object
-        ProductResponse productResponse = request.when().post("/api/createProduct")
-                .then().log().all().extract().response().as(ProductResponse.class);
-
+        productName = utils.generateRandomProductName();
+        Product product = productAPI.createProduct(productName, PRODUCT_DESCRIPTION, PRICE);
+        ProductResponse productResponse = productAPI.createProductResponse(product, CREATE_PRODUCT_ENDPOINT);
         // Assertions
         assertFalse(productResponse.isSuccess());
         assertEquals("Variants array is required and should not be empty", productResponse.getError());
@@ -109,7 +96,6 @@ public class RefactoredAPITests {
 
     @Test
     public void testUpdateProductById() {
-        //Product product = productAPI.createProduct(productName);
         product.setName("MacBook Pro");
         BeforeUpdateProductResponse beforeUpdateProductResponse = productAPI.getProductBeforeUpdate(product, this.productId, UPDATE_PRODUCT_ENDPOINT);
         // Assertions
