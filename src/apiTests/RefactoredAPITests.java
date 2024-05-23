@@ -3,6 +3,7 @@ package apiTests;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
+import io.restassured.specification.RequestSpecification;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -11,9 +12,11 @@ import pojo.*;
 import utils.*;
 import pageObjects.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.*;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 
@@ -25,10 +28,19 @@ public class RefactoredAPITests {
     private static final double PRICE = 2199.99;
     private static final double ADDITIONAL_COST = 20;
     private static final int STOCK_COUNT = 200;
+    private static final String MISSING_STRING = null;
+    private static final int MISSING_INT = 0;
+    private static final String ALL_PRODUCTS_ENDPOINT = "/api/allProducts";
+    private static final String CREATE_PRODUCT_ENDPOINT = "/api/createProduct";
+    private static final String UPDATE_PRODUCT_ENDPOINT = "/api/updateProduct/{productId}";
+    private static final String DELETE_PRODUCT_ENDPOINT = "/api/product/{productId}";
+    private static final String SEARCH_PRODUCT_ENDPOINT = "/api/product/search";
     
     private String productId;
     private String productName;
     private String invalidProductId;
+    Product product = new Product();
+    Variant variant = new Variant();
     private ProductAPI productAPI;
     Utilities utils = new Utilities();
     MongoDBManager mongoDBManager;
@@ -36,36 +48,29 @@ public class RefactoredAPITests {
     @BeforeClass
     public void setup() {
         RestAssured.baseURI = BASE_URI;
-        String connectionString = System.getenv("MONGO_URI");
-        mongoDBManager = new MongoDBManager(connectionString, "test");
+        //String connectionString = System.getenv("MONGO_URI");
+        //mongoDBManager = new MongoDBManager(connectionString, "test");
         productAPI = new ProductAPI();
     }
 
     @Test
     public void testGetAllProducts() {
-
         Response response = given()
                 .when()
-                .get("/api/allProducts");
+                .get(ALL_PRODUCTS_ENDPOINT);
 
         // Assertions
-        response.then()
-                .statusCode(200)
-                .body("success", equalTo(true))
-                .body("message", equalTo("All products have been fetched!"));
+        utils.assertResponse(response, 200, true, "All products have been fetched!");
     }
 
     @Test
     public void testCreateProduct() {
         this.productName = utils.generateRandomProductName();
         Product product = productAPI.createProduct(productName, PRODUCT_DESCRIPTION, PRICE, VARIANT_NAME, VARIANT_SKU, ADDITIONAL_COST, STOCK_COUNT);
-
-        ProductResponse productResponse = productAPI.createProductResponse(product);
-        
+        ProductResponse productResponse = productAPI.createProductResponse(product, CREATE_PRODUCT_ENDPOINT);
         // Assertions
         Assert.assertTrue(productResponse.isSuccess());
         assertEquals("New Product saved successfully!!", productResponse.getMessage());
-
         // Use the getters to get the _id field
         this.productId = productResponse.getSavedProduct().get_id();
     }
@@ -73,9 +78,7 @@ public class RefactoredAPITests {
     @Test
     public void testCreateProductWithSameName() {
         Product product = productAPI.createProduct(this.productName, PRODUCT_DESCRIPTION, PRICE, VARIANT_NAME, VARIANT_SKU, ADDITIONAL_COST, STOCK_COUNT);
-
-        UpdateProductResponse updateProductResponse = productAPI.updateProductResponse(product);
-        
+        UpdateProductResponse updateProductResponse = productAPI.updateProductResponse(product, CREATE_PRODUCT_ENDPOINT);
         // Assertions
         Assert.assertTrue(updateProductResponse.isSuccess());
         assertEquals("Product's variant updated and saved successfully", updateProductResponse.getMessage());
@@ -84,9 +87,20 @@ public class RefactoredAPITests {
 
     @Test
     public void testCreateProductWithMissingVariant() {
-        Product product = productAPI.createProduct(productName, PRODUCT_DESCRIPTION, PRICE);
+        product.setName("Test Product15");
+        product.setDescription("This is a test product");
+        product.setPrice(2199.99);
 
-        ProductResponse productResponse = productAPI.createProductResponse(product);
+        List<Variant> variants = new ArrayList<>();
+        product.setVariants(variants);
+
+        RequestSpecification request = given()
+                .contentType(ContentType.JSON)
+                .body(product);
+
+        // Deserialize the response into a ProductResponse object
+        ProductResponse productResponse = request.when().post("/api/createProduct")
+                .then().log().all().extract().response().as(ProductResponse.class);
 
         // Assertions
         assertFalse(productResponse.isSuccess());
@@ -95,10 +109,9 @@ public class RefactoredAPITests {
 
     @Test
     public void testUpdateProductById() {
-        Product product = productAPI.createProduct(productName);
-        String endpoint = "/api/updateProduct/{productId}";
-        BeforeUpdateProductResponse beforeUpdateProductResponse = productAPI.getProductBeforeUpdate(product, this.productId);
-
+        //Product product = productAPI.createProduct(productName);
+        product.setName("MacBook Pro");
+        BeforeUpdateProductResponse beforeUpdateProductResponse = productAPI.getProductBeforeUpdate(product, this.productId, UPDATE_PRODUCT_ENDPOINT);
         // Assertions
         Assert.assertTrue(beforeUpdateProductResponse.isSuccess());
         Assert.assertEquals("Product is updated and below is it's older form", beforeUpdateProductResponse.getMessage());
@@ -107,29 +120,27 @@ public class RefactoredAPITests {
     @Test
     public void testUpdateNonExistentProduct() {
         this.invalidProductId = "664287dae2fdcdac02214ca1";
+        product.setName("MacBook Pro");
         Product product = productAPI.createProduct(productName);
         Response response = given()
                 .contentType(ContentType.JSON)
                 .body(product)
-                .pathParam("productId", this.invalidProductId)
+                .pathParam("productId", invalidProductId)
                 .when()
-                .patch("/api/updateProduct/{productId}");
+                .patch(UPDATE_PRODUCT_ENDPOINT);
 
         // Assertions
-        response.then()
-                .statusCode(404)
-                .body("success", equalTo(false))
-                .body("message", equalTo("Product was not found."));
+        utils.assertResponse(response, 404, false, "Product was not found.");
     }
 
     @Test
     public void testSearchItems() {
-        String searchTerm = "product"; // Replace with your actual search term
+        String searchTerm = "Laptop";
 
         given()
                 .queryParam("q", searchTerm)
                 .when()
-                .get("/api/product/search")
+                .get(SEARCH_PRODUCT_ENDPOINT)
                 .then()
                 .statusCode(200)
                 .body("success", equalTo(true))
@@ -144,7 +155,7 @@ public class RefactoredAPITests {
         given()
                 .queryParam("q", searchTerm)
                 .when()
-                .get("/api/product/search")
+                .get(SEARCH_PRODUCT_ENDPOINT)
                 .then()
                 .statusCode(200)
                 .body("success", equalTo(true))
@@ -157,14 +168,10 @@ public class RefactoredAPITests {
         Response response = given()
                 .pathParam("productId", this.productId)
                 .when()
-                .delete("/api/product/{productId}");
+                .delete(DELETE_PRODUCT_ENDPOINT);
 
         // Assertions
-        response.then()
-                .statusCode(200)
-                .body("success", equalTo(true))
-                .body("message", equalTo("Product with id " +this.productId+ " is deleted"));
-
+        utils.assertResponse(response, 200, true, "Product with id " +this.productId+ " is deleted");
     }
 
     @Test
@@ -173,13 +180,10 @@ public class RefactoredAPITests {
         Response response = given()
                 .pathParam("productId", this.invalidProductId)
                 .when()
-                .delete("/api/product/{productId}");
+                .delete(DELETE_PRODUCT_ENDPOINT);
 
         // Assertions
-        response.then()
-                .statusCode(404)
-                .body("success", equalTo(false))
-                .body("message", equalTo("Product was not found."));
+        utils.assertResponse(response, 404, false, "Product was not found.");
     }
 
     @Test
@@ -187,21 +191,18 @@ public class RefactoredAPITests {
         Response response = given()
                 .pathParam("productId", "invalidproduct")
                 .when()
-                .delete("/api/product/{productId}");
+                .delete(DELETE_PRODUCT_ENDPOINT);
 
         // Assertions
-        response.then()
-                .statusCode(500)
-                .body("success", equalTo(false))
-                .body("message", equalTo("Internal Server Error!!"));
+        utils.assertResponse(response, 500, false, "Internal Server Error!!");
     }
 
     @AfterClass
     public void cleanup() {
-        mongoDBManager.cleanupCollections("products");
-        mongoDBManager.cleanupCollections("variants");
-        mongoDBManager.cleanupCollections("test");
-        mongoDBManager.close();
+        //mongoDBManager.cleanupCollections("products");
+        //mongoDBManager.cleanupCollections("variants");
+        //mongoDBManager.cleanupCollections("test");
+        //mongoDBManager.close();
     }
 
 }

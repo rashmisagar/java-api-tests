@@ -66,22 +66,42 @@ public class ProductAPI {
         return product;
     }
 
-    public ProductResponse createProductResponse(Product product) {
-        return request.body(product)
-                .when().post(CREATE_PRODUCT_ENDPOINT)
+    public Product updateProduct(String productName) {
+        product = new Product();
+        product.setName(productName);
+        return product;
+    }
+
+    public ProductResponse createProductResponse(Product product, String create_endPoint) {
+        RequestSpecification request = given()
+                .contentType(ContentType.JSON)
+                .body(product);
+
+        // Deserialize the response into a ProductResponse object
+        return request.when().post(create_endPoint)
                 .then().log().all().extract().response().as(ProductResponse.class);
     }
 
-    public UpdateProductResponse updateProductResponse(Product product) {
-        return request.body(product)
-                .when().put(CREATE_PRODUCT_ENDPOINT)
+    public UpdateProductResponse updateProductResponse(Product product, String create_endPoint) {
+        RequestSpecification request = given()
+                .contentType(ContentType.JSON)
+                .body(product);
+
+        // Deserialize the response into a ProductResponse object
+        return request.when().post(create_endPoint)
                 .then().log().all().extract().response().as(UpdateProductResponse.class);
     }
 
-    public BeforeUpdateProductResponse getProductBeforeUpdate(Product product, String productId) {
-        return request.pathParam("productId", productId)
-                .when().get(UPDATE_PRODUCT_ENDPOINT + "/{productId}")
-                .then().log().all().extract().response().as(BeforeUpdateProductResponse.class);
+    public BeforeUpdateProductResponse getProductBeforeUpdate(Product product, String productId, String update_endPoint) {
+        RequestSpecification request = given()
+                .contentType(ContentType.JSON)
+                .body(product)
+                .pathParam("productId", productId);
+
+        // Deserialize the response into a ProductResponse object
+        return request.when().patch(update_endPoint)
+                .then().log().all().extract().as(BeforeUpdateProductResponse.class);
     }
+
 
 }

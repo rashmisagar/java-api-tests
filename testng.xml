@@ -2,16 +2,16 @@
 <suite name="ProductAPITestsSuite">
     <test name="ProductAPITests">
         <classes>
-            <class name="apiTests.ProductAPITests">
+            <class name="apiTests.RefactoredAPITests">
                 <methods>
                     <include name="testGetAllProducts"/>
                     <include name="testCreateProduct"/>
+                    <include name="testSearchItems"/>
+                    <include name="testSearchItemsWithNoResults"/>
                     <include name="testCreateProductWithSameName"/>
                     <include name="testCreateProductWithMissingVariant"/>
                     <include name="testUpdateProductById"/>
                     <include name="testUpdateNonExistentProduct"/>
-                    <include name="testSearchItems"/>
-                    <include name="testSearchItemsWithNoResults"/>
                     <include name="testDeleteProductById"/>
                     <include name="testDeleteNonExistentProductById"/>
                     <include name="testDeleteInvalidProduct"/>
